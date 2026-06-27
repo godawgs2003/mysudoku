@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>My Ad-Free Sudoku</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f7f9fa;
+            user-select: none;
+        }
+        h1 { margin-bottom: 15px; color: #222; font-size: 28px; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(9, 40px);
+            grid-template-rows: repeat(9, 40px);
+            background-color: #fff;
+            border: 3px solid #000;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        
+        .cell {
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 500;
+            color: #1a73e8; /* Player placed numbers are blue */
+            cursor: pointer;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* Alternating grid line rules */
+        .cell.border-right { border-right: 2px solid #000; }
+        .cell.border-bottom { border-bottom: 2px solid #000; }
+        
+        /* Unique styles for game states */
+        .cell.starting-number {
+            background-color: #f1f3f4;
+            color: #000 !important; /* Starting numbers are black */
+            font-weight: bold;
+        }
+        .cell.selected {
+            background-color: #e8f0fe;
+        }
+
+        /* Number Pad */
+        .numpad {
+            display: grid;
+            grid-template-columns: repeat(5, 55px);
+            gap: 12px;
+            justify-content: center;
+        }
+        .num-btn {
+            height: 55px;
+            background-color: #fff;
+            border: 1px solid #dadce0;
+            border-radius: 12px;
+            font-size: 22px;
+            font-weight: 600;
+            color: #3c4043;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: background 0.1s;
+        }
+        .num-btn:active {
+            background-color: #e8eaed;
+        }
+        .clear-btn {
+            background-color: #fce8e6;
+            color: #c5221f;
+            border-color: #fad2cf;
+        }
+        .clear-btn:active {
+            background-color: #fad2cf;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Sudoku</h1>
+    
+    <div class="grid" id="board"></div>
+    <div class="numpad" id="numpad"></div>
+
+    <script>
+        const boardContainer = document.getElementById('board');
+        const numpadContainer = document.getElementById('numpad');
+        let selectedCell = null;
+
+        // A sample puzzle layout string (0 represents an empty cell)
+        const puzzleString = 
+            "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
+
+        // 1. Build the Board and populate puzzle
+        for (let i = 0; i < 81; i++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            
+            const row = Math.floor(i / 9);
+            const col = i % 9;
+
+            if (col === 2 || col === 5) cell.classList.add('border-right');
+            if (row === 2 || row === 5) cell.classList.add('border-bottom');
+
+            // Read the character from our puzzle string
+            const val = puzzleString[i];
+            
+            if (val !== "0") {
+                cell.innerText = val;
+                cell.classList.add('starting-number'); // Style it differently
+            } else {
+                // Only let players select cells that started empty
+                cell.addEventListener('click', () => {
+                    if (selectedCell) selectedCell.classList.remove('selected');
+                    selectedCell = cell;
+                    cell.classList.add('selected');
+                });
+            }
+
+            boardContainer.appendChild(cell);
+        }
+
+        // 2. Number Pad Buttons (1 to 9)
+        for (let num = 1; num <= 9; num++) {
+            const btn = document.createElement('button');
+            btn.classList.add('num-btn');
+            btn.innerText = num;
+            
+            btn.addEventListener('click', () => {
+                if (selectedCell) {
+                    selectedCell.innerText = num;
+                }
+            });
+            numpadContainer.appendChild(btn);
+        }
+
+        // 3. Clear Button
+        const clearBtn = document.createElement('button');
+        clearBtn.classList.add('num-btn', 'clear-btn');
+        clearBtn.innerText = 'X';
+        clearBtn.addEventListener('click', () => {
+            if (selectedCell) {
+                selectedCell.innerText = '';
+            }
+        });
+        numpadContainer.appendChild(clearBtn);
+    </script>
+</body>
+</html>
