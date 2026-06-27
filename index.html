@@ -19,7 +19,7 @@
             position: relative;
         }
         
-        /* Change 1: Intro Screen Component */
+        /* Menu Screen Configurations */
         .screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -34,30 +34,50 @@
         .screen.hidden {
             transform: translateY(-100%);
         }
-        .menu-title { font-size: 42px; color: #222; margin-bottom: 30px; font-weight: bold; }
-        .start-btn {
-            padding: 15px 45px;
-            font-size: 22px;
+        .menu-title { font-size: 42px; color: #222; margin-bottom: 10px; font-weight: bold; }
+        .menu-subtitle { font-size: 16px; color: #666; margin-bottom: 40px; }
+        
+        /* Difficulty Action Buttons */
+        .menu-btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 200px;
+        }
+        .difficulty-btn {
+            padding: 15px;
+            font-size: 18px;
             font-weight: bold;
             color: white;
-            background-color: #1a73e8;
             border: none;
-            border-radius: 30px;
+            border-radius: 14px;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            transition: transform 0.1s;
         }
-        .start-btn:active { background-color: #1557b0; }
+        .difficulty-btn:active { transform: scale(0.97); }
+        .btn-easy { background-color: #34a853; }
+        .btn-medium { background-color: #fbbc05; color: #3c4043; }
+        .btn-hard { background-color: #ea4335; }
 
-        /* Status Header Layout (Timer & Best Score) */
+        /* Status Metrics Row */
         .game-header {
             width: 360px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             color: #5f6368;
+        }
+        .diff-tag {
+            background-color: #e8f0fe;
+            color: #1a73e8;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            text-transform: uppercase;
         }
         
         .grid {
@@ -94,7 +114,7 @@
         .cell.highlight-match { background-color: #fff9c4; }
         .cell.error { background-color: #fce8e6; color: #a51d24; }
 
-        /* Number Pad */
+        /* Input Controls */
         .numpad {
             display: grid;
             grid-template-columns: repeat(5, 55px);
@@ -112,18 +132,11 @@
             cursor: pointer;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        .num-btn.active-tool {
-            background-color: #b3d4fc !important;
-            border-color: #1a73e8;
-        }
-        .num-btn.completed-number {
-            background-color: #e6f4ea;
-            color: #137333;
-            border-color: #a8dab5;
-        }
+        .num-btn.active-tool { background-color: #b3d4fc !important; border-color: #1a73e8; }
+        .num-btn.completed-number { background-color: #e6f4ea; color: #137333; border-color: #a8dab5; }
         .clear-btn { background-color: #fce8e6; color: #c5221f; border-color: #fad2cf; }
 
-        /* Victory Screen Overlay */
+        /* Overlay Win Canvas */
         .victory-screen {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -151,27 +164,33 @@
 </head>
 <body>
 
-    <!-- Change 1: Intro Screen -->
+    <!-- Main Entry Screen Panel -->
     <div class="screen" id="introScreen">
         <div class="menu-title">Sudoku</div>
-        <button class="start-btn" onclick="startGame()">Start</button>
+        <div class="menu-subtitle">Ad-Free Custom Edition</div>
+        <div class="menu-btn-group">
+            <button class="difficulty-btn btn-easy" onclick="selectDifficulty('easy')">Easy</button>
+            <button class="difficulty-btn btn-medium" onclick="selectDifficulty('medium')">Medium</button>
+            <button class="difficulty-btn btn-hard" onclick="selectDifficulty('hard')">Hard</button>
+        </div>
     </div>
 
-    <!-- Change 2 & 3: Info Row for Live Timer and Record Time -->
+    <!-- Active Game Dashboards -->
     <div class="game-header">
         <div id="timerDisplay">Time: 00:00</div>
+        <div class="diff-tag" id="difficultyTag">Easy</div>
         <div id="bestTimeDisplay">Best: --:--</div>
     </div>
     
     <div class="grid" id="board"></div>
     <div class="numpad" id="numpad"></div>
 
-    <!-- Victory Screen -->
+    <!-- Celebration Screen -->
     <div class="victory-screen" id="victoryScreen">
         <h2>You Win! 🎉</h2>
-        <p>Puzzle complete.</p>
+        <p>Puzzle completely solved.</p>
         <div class="victory-time-msg" id="victoryTimeMsg">Your Time: 00:00</div>
-        <button class="victory-btn" onclick="resetGame()">Play Again</button>
+        <button class="victory-btn" onclick="exitToMenu()">Main Menu</button>
     </div>
 
     <script>
@@ -181,19 +200,33 @@
         const introScreen = document.getElementById('introScreen');
         const timerDisplay = document.getElementById('timerDisplay');
         const bestTimeDisplay = document.getElementById('bestTimeDisplay');
+        const difficultyTag = document.getElementById('difficultyTag');
         const victoryTimeMsg = document.getElementById('victoryTimeMsg');
         
         let activeNumberTool = null; 
         let timerInterval = null;
         let secondsElapsed = 0;
+        let currentDifficulty = 'easy';
+        let currentActivePuzzle = "";
 
-        const puzzleString = 
-            "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
+        // CENTRAL PUZZLE BANK LIBRARY DATABASE
+        // 0s mark target empty cells. Feel free to stack dozens of strings inside these brackets!
+        const puzzleLibrary = {
+            easy: [
+                "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
+                "000267904000502008256189374712394586348651297569874132123476859475913620896025040"
+            ],
+            medium: [
+                "000600049000040306009102000030050160008000500054100070000307200506020000180004000",
+                "305200000000000024090030700000003001014706850600800000002010040760000000000007203"
+            ],
+            hard: [
+                "000000000008300010020009600190800000007000400000014076001900050030002800000000000",
+                "000000810000000043500610000100000008030108050700000002000056001610000000094000000"
+            ]
+        };
 
-        // Load the initial Best Time data out of the phone's long-term memory cache
-        displayBestTime();
-
-        // 1. Setup the Board
+        // 1. Instantiating DOM Shell Grid System
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             cell.classList.add('cell');
@@ -206,12 +239,6 @@
 
             if (col === 2 || col === 5) cell.classList.add('border-right');
             if (row === 2 || row === 5) cell.classList.add('border-bottom');
-
-            const val = puzzleString[i];
-            if (val !== "0") {
-                cell.innerText = val;
-                cell.classList.add('starting-number');
-            }
 
             cell.addEventListener('click', () => {
                 if (cell.classList.contains('starting-number')) {
@@ -229,13 +256,42 @@
             boardContainer.appendChild(cell);
         }
 
-        // 2. Change 1: Intro State Control Function
-        window.startGame = function() {
-            introScreen.classList.add('hidden'); // Slide the intro panel up
+        // 2. State Engine Routing Setup
+        window.selectDifficulty = function(level) {
+            currentDifficulty = level;
+            difficultyTag.innerText = level;
+            
+            // Fetch records bound to this specific difficulty key
+            displayBestTime();
+            
+            // Random Selection Routine pulling straight out of our corresponding bank list
+            const bank = puzzleLibrary[level];
+            const randomIndex = Math.floor(Math.random() * bank.length);
+            currentActivePuzzle = bank[randomIndex];
+
+            loadPuzzleToGrid(currentActivePuzzle);
+            
+            introScreen.classList.add('hidden');
             startTimer();
         }
 
-        // 3. Change 2: Stopwatch Logic
+        function loadPuzzleToGrid(puzzleStr) {
+            const cells = document.querySelectorAll('.cell');
+            for (let i = 0; i < 81; i++) {
+                const char = puzzleStr[i];
+                cells[i].classList.remove('starting-number', 'error', 'highlight-match');
+                
+                if (char !== "0") {
+                    cells[i].innerText = char;
+                    cells[i].classList.add('starting-number');
+                } else {
+                    cells[i].innerText = '';
+                }
+            }
+            selectTool(null);
+        }
+
+        // 3. Timing Thread Workflows
         function startTimer() {
             clearInterval(timerInterval);
             secondsElapsed = 0;
@@ -251,9 +307,10 @@
             return `${mins}:${secs}`;
         }
 
-        // 4. Change 3: Storage Logic for Personal Records
+        // 4. Localized Database Memory Handlers
         function displayBestTime() {
-            const savedBest = localStorage.getItem('sudoku_best_time');
+            const storageKey = 'sudoku_best_' + currentDifficulty;
+            const savedBest = localStorage.getItem(storageKey);
             if (savedBest) {
                 bestTimeDisplay.innerText = "Best: " + formatTime(parseInt(savedBest));
             } else {
@@ -262,12 +319,12 @@
         }
 
         function handleWinRecord() {
-            clearInterval(timerInterval); // Stop counting
-            const savedBest = localStorage.getItem('sudoku_best_time');
+            clearInterval(timerInterval);
+            const storageKey = 'sudoku_best_' + currentDifficulty;
+            const savedBest = localStorage.getItem(storageKey);
             
-            // Check if this performance sets a new high score
             if (!savedBest || secondsElapsed < parseInt(savedBest)) {
-                localStorage.setItem('sudoku_best_time', secondsElapsed.toString());
+                localStorage.setItem(storageKey, secondsElapsed.toString());
                 displayBestTime();
             }
             
@@ -275,7 +332,7 @@
             victoryScreen.classList.add('show');
         }
 
-        // 5. Core Engine Refresher
+        // 5. Verification Matrix Actions
         function validateAndHighlight() {
             const cells = document.querySelectorAll('.cell');
             let errorCount = 0;
@@ -292,9 +349,7 @@
 
             if (activeNumberTool && activeNumberTool !== 'X') {
                 cells.forEach(cell => {
-                    if (cell.innerText === activeNumberTool) {
-                        cell.classList.add('highlight-match');
-                    }
+                    if (cell.innerText === activeNumberTool) cell.classList.add('highlight-match');
                 });
             }
 
@@ -319,7 +374,6 @@
                 });
             });
 
-            // Handle extinction/completion colors on inputs
             document.querySelectorAll('.num-btn').forEach(btn => {
                 const num = btn.dataset.tool;
                 if (num && num !== 'X') {
@@ -328,7 +382,6 @@
                 }
             });
 
-            // Trigger Win Event
             if (filledCount === 81 && errorCount === 0) {
                 handleWinRecord();
             }
@@ -343,7 +396,7 @@
             validateAndHighlight();
         }
 
-        // 6. Build Keypad Controls
+        // 6. Generating Pad Layout Nodes
         for (let num = 1; num <= 9; num++) {
             const btn = document.createElement('button');
             btn.classList.add('num-btn');
@@ -360,15 +413,10 @@
         clearBtn.addEventListener('click', () => selectTool('X'));
         numpadContainer.appendChild(clearBtn);
 
-        window.resetGame = function() {
-            const cells = document.querySelectorAll('.cell');
-            for (let i = 0; i < 81; i++) {
-                const val = puzzleString[i];
-                if (val === "0") cells[i].innerText = '';
-            }
+        window.exitToMenu = function() {
             victoryScreen.classList.remove('show');
-            selectTool(null);
-            startTimer();
+            introScreen.classList.remove('hidden');
+            clearInterval(timerInterval);
         }
     </script>
 </body>
