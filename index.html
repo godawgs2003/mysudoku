@@ -15,6 +15,8 @@
             margin: 0;
             background-color: #f7f9fa;
             user-select: none;
+            overflow: hidden;
+            position: relative;
         }
         h1 { margin-bottom: 15px; color: #222; font-size: 28px; }
         
@@ -35,7 +37,7 @@
             justify-content: center;
             font-size: 20px;
             font-weight: 500;
-            color: #1a73e8; /* Player numbers */
+            color: #1a73e8;
             cursor: pointer;
             border: 1px solid #e0e0e0;
         }
@@ -49,14 +51,8 @@
             font-weight: bold;
         }
         
-        /* Highlight rules */
-        .cell.highlight-match {
-            background-color: #fff9c4; /* Soft yellow for matching numbers */
-        }
-        .cell.error {
-            background-color: #fce8e6;
-            color: #a51d24;
-        }
+        .cell.highlight-match { background-color: #fff9c4; }
+        .cell.error { background-color: #fce8e6; color: #a51d24; }
 
         /* Number Pad */
         .numpad {
@@ -75,16 +71,52 @@
             color: #3c4043;
             cursor: pointer;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: relative;
         }
-        /* Visual cue for which number is active */
         .num-btn.active-tool {
             background-color: #b3d4fc !important;
             border-color: #1a73e8;
         }
-        .clear-btn {
-            background-color: #fce8e6;
-            color: #c5221f;
-            border-color: #fad2cf;
+        
+        /* Change 1: Styling for a completely completed number */
+        .num-btn.completed-number {
+            background-color: #e6f4ea;
+            color: #137333;
+            border-color: #a8dab5;
+        }
+        .clear-btn { background-color: #fce8e6; color: #c5221f; border-color: #fad2cf; }
+
+        /* Change 2: Victory Overlay Screen styling */
+        .victory-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(26, 115, 232, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            z-index: 10;
+        }
+        .victory-screen.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .victory-screen h2 { font-size: 40px; margin-bottom: 10px; }
+        .victory-screen p { font-size: 18px; margin-bottom: 20px; }
+        .victory-btn {
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: white;
+            color: #1a73e8;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
     </style>
 </head>
@@ -95,11 +127,18 @@
     <div class="grid" id="board"></div>
     <div class="numpad" id="numpad"></div>
 
+    <!-- Victory Screen Structure -->
+    <div class="victory-screen" id="victoryScreen">
+        <h2>You Win! 🎉</h2>
+        <p>You solved the puzzle without any ads!</p>
+        <button class="victory-btn" onclick="resetGame()">Play Again</button>
+    </div>
+
     <script>
         const boardContainer = document.getElementById('board');
         const numpadContainer = document.getElementById('numpad');
+        const victoryScreen = document.getElementById('victoryScreen');
         
-        // Track the actively selected keypad tool ('1'-'9', 'X' for clear, or null)
         let activeNumberTool = null; 
 
         const puzzleString = 
@@ -125,41 +164,41 @@
                 cell.classList.add('starting-number');
             }
 
-            // Cell Interaction Logic
             cell.addEventListener('click', () => {
-                // If it's a structural starting number, don't let players alter it
                 if (cell.classList.contains('starting-number')) {
-                    // However, clicking it CAN change our highlighted matching numbers!
-                    if (cell.innerText) {
-                        selectTool(cell.innerText);
-                    }
+                    if (cell.innerText) selectTool(cell.innerText);
                     return;
                 }
 
-                // Apply active tool action to the clicked blank cell
                 if (activeNumberTool === 'X') {
                     cell.innerText = '';
                 } else if (activeNumberTool !== null) {
                     cell.innerText = activeNumberTool;
                 }
                 
-                // Refresh error checking and board highlights
                 validateAndHighlight();
             });
 
             boardContainer.appendChild(cell);
         }
 
-        // 2. Shared Engine: Runs error calculations & board matching colors
+        // 2. Core Game Logic Engine
         function validateAndHighlight() {
             const cells = document.querySelectorAll('.cell');
+            let errorCount = 0;
+            let filledCount = 0;
             
-            // Wipe out historical visual markers
+            // Track counts of each number across the board
+            const numberCounts = { '1':0, '2':0, '3':0, '4':0, '5':0, '6':0, '7':0, '8':0, '9':0 };
+
             cells.forEach(cell => {
                 cell.classList.remove('error', 'highlight-match');
+                if (cell.innerText) {
+                    filledCount++;
+                    numberCounts[cell.innerText]++;
+                }
             });
 
-            // Change 1 & 2: Highlight all cells that match our current active tool string
             if (activeNumberTool && activeNumberTool !== 'X') {
                 cells.forEach(cell => {
                     if (cell.innerText === activeNumberTool) {
@@ -168,7 +207,7 @@
                 });
             }
 
-            // Run standard rule duplication verification
+            // Run collision checks
             cells.forEach(currentCell => {
                 const val = currentCell.innerText;
                 if (!val) return;
@@ -190,16 +229,33 @@
 
                     if (sameRow || sameCol || sameBox) {
                         currentCell.classList.add('error');
+                        errorCount++;
                     }
                 });
             });
+
+            // Update Keypad Styles (Handle Done Numbers)
+            const buttons = document.querySelectorAll('.num-btn');
+            buttons.forEach(btn => {
+                const num = btn.dataset.tool;
+                if (num && num !== 'X') {
+                    // If 9 exist and none of them are red/errored out
+                    if (numberCounts[num] === 9) {
+                        btn.classList.add('completed-number');
+                    } else {
+                        btn.classList.remove('completed-number');
+                    }
+                }
+            });
+
+            // Win Condition Check
+            if (filledCount === 81 && errorCount === 0) {
+                victoryScreen.classList.add('show');
+            }
         }
 
-        // Helper function to handle pad button states
         function selectTool(targetTool) {
             activeNumberTool = targetTool;
-            
-            // Toggle highlight visual cues on keypads
             const buttons = document.querySelectorAll('.num-btn');
             buttons.forEach(btn => {
                 if (btn.dataset.tool === targetTool) {
@@ -208,7 +264,6 @@
                     btn.classList.remove('active-tool');
                 }
             });
-
             validateAndHighlight();
         }
 
@@ -218,10 +273,7 @@
             btn.classList.add('num-btn');
             btn.innerText = num;
             btn.dataset.tool = num.toString();
-            
-            btn.addEventListener('click', () => {
-                selectTool(num.toString());
-            });
+            btn.addEventListener('click', () => selectTool(num.toString()));
             numpadContainer.appendChild(btn);
         }
 
@@ -230,10 +282,21 @@
         clearBtn.classList.add('num-btn', 'clear-btn');
         clearBtn.innerText = 'X';
         clearBtn.dataset.tool = 'X';
-        clearBtn.addEventListener('click', () => {
-            selectTool('X');
-        });
+        clearBtn.addEventListener('click', () => selectTool('X'));
         numpadContainer.appendChild(clearBtn);
+
+        // Reset game helper
+        window.resetGame = function() {
+            const cells = document.querySelectorAll('.cell');
+            for (let i = 0; i < 81; i++) {
+                const val = puzzleString[i];
+                if (val === "0") {
+                    cells[i].innerText = '';
+                }
+            }
+            victoryScreen.classList.remove('show');
+            selectTool(null);
+        }
     </script>
 </body>
 </html>
