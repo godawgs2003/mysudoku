@@ -35,23 +35,27 @@
             justify-content: center;
             font-size: 20px;
             font-weight: 500;
-            color: #1a73e8; /* Player placed numbers are blue */
+            color: #1a73e8; /* Player numbers are blue */
             cursor: pointer;
             border: 1px solid #e0e0e0;
         }
         
-        /* Alternating grid line rules */
         .cell.border-right { border-right: 2px solid #000; }
         .cell.border-bottom { border-bottom: 2px solid #000; }
         
-        /* Unique styles for game states */
         .cell.starting-number {
             background-color: #f1f3f4;
-            color: #000 !important; /* Starting numbers are black */
+            color: #000 !important;
             font-weight: bold;
         }
         .cell.selected {
             background-color: #e8f0fe;
+        }
+        
+        /* New styling rule for mistakes */
+        .cell.error {
+            background-color: #fce8e6;
+            color: #a51d24;
         }
 
         /* Number Pad */
@@ -71,7 +75,6 @@
             color: #3c4043;
             cursor: pointer;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            transition: background 0.1s;
         }
         .num-btn:active {
             background-color: #e8eaed;
@@ -80,9 +83,6 @@
             background-color: #fce8e6;
             color: #c5221f;
             border-color: #fad2cf;
-        }
-        .clear-btn:active {
-            background-color: #fad2cf;
         }
     </style>
 </head>
@@ -98,29 +98,29 @@
         const numpadContainer = document.getElementById('numpad');
         let selectedCell = null;
 
-        // A sample puzzle layout string (0 represents an empty cell)
         const puzzleString = 
             "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
 
-        // 1. Build the Board and populate puzzle
+        // 1. Build Board and assign row/column tracking attributes
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             cell.classList.add('cell');
             
             const row = Math.floor(i / 9);
             const col = i % 9;
+            
+            // Embed coordinates into the element itself so we can read them later
+            cell.dataset.row = row;
+            cell.dataset.col = col;
 
             if (col === 2 || col === 5) cell.classList.add('border-right');
             if (row === 2 || row === 5) cell.classList.add('border-bottom');
 
-            // Read the character from our puzzle string
             const val = puzzleString[i];
-            
             if (val !== "0") {
                 cell.innerText = val;
-                cell.classList.add('starting-number'); // Style it differently
+                cell.classList.add('starting-number');
             } else {
-                // Only let players select cells that started empty
                 cell.addEventListener('click', () => {
                     if (selectedCell) selectedCell.classList.remove('selected');
                     selectedCell = cell;
@@ -131,7 +131,48 @@
             boardContainer.appendChild(cell);
         }
 
-        // 2. Number Pad Buttons (1 to 9)
+        // 2. Validate Board Function
+        function validateBoard() {
+            const cells = document.querySelectorAll('.cell');
+            
+            // Reset all error stylings before scanning
+            cells.forEach(cell => cell.classList.remove('error'));
+
+            // Check every single cell on the board
+            cells.forEach(currentCell => {
+                const val = currentCell.innerText;
+                if (!val) return; // Skip completely empty cells
+
+                const row = parseInt(currentCell.dataset.row);
+                const col = parseInt(currentCell.dataset.col);
+
+                // Compare against every other cell to find conflicts
+                cells.forEach(otherCell => {
+                    // Don't compare a cell to itself
+                    if (currentCell === otherCell) return;
+                    
+                    const otherVal = otherCell.innerText;
+                    if (val !== otherVal) return; // Values don't match, no conflict
+
+                    const otherRow = parseInt(otherCell.dataset.row);
+                    const otherCol = parseInt(otherCell.dataset.col);
+
+                    // Rule A: Same Row check
+                    const sameRow = (row === otherRow);
+                    // Rule B: Same Column check
+                    const sameCol = (col === otherCol);
+                    // Rule C: Same 3x3 Box check
+                    const sameBox = (Math.floor(row / 3) === Math.floor(otherRow / 3) && 
+                                     Math.floor(col / 3) === Math.floor(otherCol / 3));
+
+                    if (sameRow || sameCol || sameBox) {
+                        currentCell.classList.add('error');
+                    }
+                });
+            });
+        }
+
+        // 3. Number Pad Input Event Bindings
         for (let num = 1; num <= 9; num++) {
             const btn = document.createElement('button');
             btn.classList.add('num-btn');
@@ -140,18 +181,20 @@
             btn.addEventListener('click', () => {
                 if (selectedCell) {
                     selectedCell.innerText = num;
+                    validateBoard(); // Run validation checks on input changes
                 }
             });
             numpadContainer.appendChild(btn);
         }
 
-        // 3. Clear Button
+        // 4. Clear Button Bindings
         const clearBtn = document.createElement('button');
         clearBtn.classList.add('num-btn', 'clear-btn');
         clearBtn.innerText = 'X';
         clearBtn.addEventListener('click', () => {
             if (selectedCell) {
                 selectedCell.innerText = '';
+                validateBoard(); // Re-run validation to clear error colors if fixed
             }
         });
         numpadContainer.appendChild(clearBtn);
