@@ -35,7 +35,7 @@
             justify-content: center;
             font-size: 20px;
             font-weight: 500;
-            color: #1a73e8; /* Player numbers are blue */
+            color: #1a73e8; /* Player numbers */
             cursor: pointer;
             border: 1px solid #e0e0e0;
         }
@@ -48,11 +48,11 @@
             color: #000 !important;
             font-weight: bold;
         }
-        .cell.selected {
-            background-color: #e8f0fe;
-        }
         
-        /* New styling rule for mistakes */
+        /* Highlight rules */
+        .cell.highlight-match {
+            background-color: #fff9c4; /* Soft yellow for matching numbers */
+        }
         .cell.error {
             background-color: #fce8e6;
             color: #a51d24;
@@ -76,8 +76,10 @@
             cursor: pointer;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-        .num-btn:active {
-            background-color: #e8eaed;
+        /* Visual cue for which number is active */
+        .num-btn.active-tool {
+            background-color: #b3d4fc !important;
+            border-color: #1a73e8;
         }
         .clear-btn {
             background-color: #fce8e6;
@@ -96,12 +98,14 @@
     <script>
         const boardContainer = document.getElementById('board');
         const numpadContainer = document.getElementById('numpad');
-        let selectedCell = null;
+        
+        // Track the actively selected keypad tool ('1'-'9', 'X' for clear, or null)
+        let activeNumberTool = null; 
 
         const puzzleString = 
             "530070000600195000098000060800060003400803001700020006060000280000419005000080079";
 
-        // 1. Build Board and assign row/column tracking attributes
+        // 1. Build Board
         for (let i = 0; i < 81; i++) {
             const cell = document.createElement('div');
             cell.classList.add('cell');
@@ -109,7 +113,6 @@
             const row = Math.floor(i / 9);
             const col = i % 9;
             
-            // Embed coordinates into the element itself so we can read them later
             cell.dataset.row = row;
             cell.dataset.col = col;
 
@@ -120,48 +123,68 @@
             if (val !== "0") {
                 cell.innerText = val;
                 cell.classList.add('starting-number');
-            } else {
-                cell.addEventListener('click', () => {
-                    if (selectedCell) selectedCell.classList.remove('selected');
-                    selectedCell = cell;
-                    cell.classList.add('selected');
-                });
             }
+
+            // Cell Interaction Logic
+            cell.addEventListener('click', () => {
+                // If it's a structural starting number, don't let players alter it
+                if (cell.classList.contains('starting-number')) {
+                    // However, clicking it CAN change our highlighted matching numbers!
+                    if (cell.innerText) {
+                        selectTool(cell.innerText);
+                    }
+                    return;
+                }
+
+                // Apply active tool action to the clicked blank cell
+                if (activeNumberTool === 'X') {
+                    cell.innerText = '';
+                } else if (activeNumberTool !== null) {
+                    cell.innerText = activeNumberTool;
+                }
+                
+                // Refresh error checking and board highlights
+                validateAndHighlight();
+            });
 
             boardContainer.appendChild(cell);
         }
 
-        // 2. Validate Board Function
-        function validateBoard() {
+        // 2. Shared Engine: Runs error calculations & board matching colors
+        function validateAndHighlight() {
             const cells = document.querySelectorAll('.cell');
             
-            // Reset all error stylings before scanning
-            cells.forEach(cell => cell.classList.remove('error'));
+            // Wipe out historical visual markers
+            cells.forEach(cell => {
+                cell.classList.remove('error', 'highlight-match');
+            });
 
-            // Check every single cell on the board
+            // Change 1 & 2: Highlight all cells that match our current active tool string
+            if (activeNumberTool && activeNumberTool !== 'X') {
+                cells.forEach(cell => {
+                    if (cell.innerText === activeNumberTool) {
+                        cell.classList.add('highlight-match');
+                    }
+                });
+            }
+
+            // Run standard rule duplication verification
             cells.forEach(currentCell => {
                 const val = currentCell.innerText;
-                if (!val) return; // Skip completely empty cells
+                if (!val) return;
 
                 const row = parseInt(currentCell.dataset.row);
                 const col = parseInt(currentCell.dataset.col);
 
-                // Compare against every other cell to find conflicts
                 cells.forEach(otherCell => {
-                    // Don't compare a cell to itself
                     if (currentCell === otherCell) return;
-                    
-                    const otherVal = otherCell.innerText;
-                    if (val !== otherVal) return; // Values don't match, no conflict
+                    if (val !== otherCell.innerText) return;
 
                     const otherRow = parseInt(otherCell.dataset.row);
                     const otherCol = parseInt(otherCell.dataset.col);
 
-                    // Rule A: Same Row check
                     const sameRow = (row === otherRow);
-                    // Rule B: Same Column check
                     const sameCol = (col === otherCol);
-                    // Rule C: Same 3x3 Box check
                     const sameBox = (Math.floor(row / 3) === Math.floor(otherRow / 3) && 
                                      Math.floor(col / 3) === Math.floor(otherCol / 3));
 
@@ -172,30 +195,43 @@
             });
         }
 
-        // 3. Number Pad Input Event Bindings
+        // Helper function to handle pad button states
+        function selectTool(targetTool) {
+            activeNumberTool = targetTool;
+            
+            // Toggle highlight visual cues on keypads
+            const buttons = document.querySelectorAll('.num-btn');
+            buttons.forEach(btn => {
+                if (btn.dataset.tool === targetTool) {
+                    btn.classList.add('active-tool');
+                } else {
+                    btn.classList.remove('active-tool');
+                }
+            });
+
+            validateAndHighlight();
+        }
+
+        // 3. Build Keypad Controls
         for (let num = 1; num <= 9; num++) {
             const btn = document.createElement('button');
             btn.classList.add('num-btn');
             btn.innerText = num;
+            btn.dataset.tool = num.toString();
             
             btn.addEventListener('click', () => {
-                if (selectedCell) {
-                    selectedCell.innerText = num;
-                    validateBoard(); // Run validation checks on input changes
-                }
+                selectTool(num.toString());
             });
             numpadContainer.appendChild(btn);
         }
 
-        // 4. Clear Button Bindings
+        // 4. Build Clear Button
         const clearBtn = document.createElement('button');
         clearBtn.classList.add('num-btn', 'clear-btn');
         clearBtn.innerText = 'X';
+        clearBtn.dataset.tool = 'X';
         clearBtn.addEventListener('click', () => {
-            if (selectedCell) {
-                selectedCell.innerText = '';
-                validateBoard(); // Re-run validation to clear error colors if fixed
-            }
+            selectTool('X');
         });
         numpadContainer.appendChild(clearBtn);
     </script>
