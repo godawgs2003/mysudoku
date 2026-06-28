@@ -689,13 +689,14 @@
                 }
             });
 
-            if (activeNumberTool && activeNumberTool !== 'X') {
-                cells.forEach(cell => {
-                    if (cell.querySelector('.cell-value').innerText === activeNumberTool) {
-                        cell.classList.add('highlight-match');
-                    }
-                });
-            }
+if (activeNumberTool && activeNumberTool !== 'X') {
+    cells.forEach(cell => {
+        const valDiv = cell.querySelector('.cell-value');
+        if (valDiv && valDiv.innerText === activeNumberTool) {
+            cell.classList.add('highlight-match');
+        }
+    });
+}
 
             cells.forEach(currentCell => {
                 const val = currentCell.querySelector('.cell-value').innerText;
