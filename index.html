@@ -79,6 +79,17 @@
             font-size: 12px;
             text-transform: uppercase;
         }
+        .exit-btn {
+            background: none;
+            border: 1px solid #dadce0;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #5f6368;
+            font-weight: bold;
+        }
+        .exit-btn:active { background-color: #f1f3f4; }
         
         .grid {
             display: grid;
@@ -92,37 +103,68 @@
         
         .cell {
             background-color: white;
+            position: relative;
+            cursor: pointer;
+            border: 1px solid #e0e0e0;
+            box-sizing: border-box;
+        }
+        
+        .cell.border-right { border-right: 2px solid #000; }
+        .cell.border-bottom { border-bottom: 2px solid #000; }
+        
+        /* Inner Container Layouts for Answers vs Notes */
+        .cell-value {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 20px;
             font-weight: 500;
             color: #1a73e8;
-            cursor: pointer;
-            border: 1px solid #e0e0e0;
+            z-index: 2;
         }
         
-        .cell.border-right { border-right: 2px solid #000; }
-        .cell.border-bottom { border-bottom: 2px solid #000; }
-        
-        .cell.starting-number {
+        .cell.starting-number .cell-value {
             background-color: #f1f3f4;
             color: #000 !important;
             font-weight: bold;
         }
         
+        .notes-grid {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            padding: 2px;
+            box-sizing: border-box;
+            z-index: 1;
+        }
+        
+        .note-digit {
+            font-size: 9px;
+            color: #70757a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            line-height: 1;
+        }
+        
         .cell.highlight-match { background-color: #fff9c4; }
-        .cell.error { background-color: #fce8e6; color: #a51d24; }
+        .cell.error { background-color: #fce8e6; }
+        .cell.error .cell-value { color: #a51d24; }
 
         /* Input Controls */
         .numpad {
             display: grid;
-            grid-template-columns: repeat(5, 55px);
-            gap: 12px;
+            grid-template-columns: repeat(6, 52px);
+            gap: 10px;
             justify-content: center;
         }
         .num-btn {
-            height: 55px;
+            height: 52px;
             background-color: #fff;
             border: 1px solid #dadce0;
             border-radius: 12px;
@@ -134,7 +176,11 @@
         }
         .num-btn.active-tool { background-color: #b3d4fc !important; border-color: #1a73e8; }
         .num-btn.completed-number { background-color: #e6f4ea; color: #137333; border-color: #a8dab5; }
-        .clear-btn { background-color: #fce8e6; color: #c5221f; border-color: #fad2cf; }
+        .clear-btn { background-color: #fce8e6; color: #c5221f; border-color: #fad2cf; font-size: 18px; }
+        
+        /* Pencil Toggle Button Feature styling */
+        .pencil-btn { background-color: #fff; font-size: 18px; border-color: #dadce0; }
+        .pencil-btn.notes-on { background-color: #e8f0fe; border-color: #1a73e8; color: #1a73e8; }
 
         /* Overlay Win Canvas */
         .victory-screen {
@@ -149,7 +195,7 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.5s ease;
-            z-index: 10;
+            z-index: 30;
         }
         .victory-screen.show { opacity: 1; pointer-events: auto; }
         .victory-screen h2 { font-size: 40px; margin-bottom: 10px; }
@@ -177,8 +223,9 @@
 
     <!-- Active Game Dashboards -->
     <div class="game-header">
-        <div id="timerDisplay">Time: 00:00</div>
+        <button class="exit-btn" onclick="confirmAndExit()">← Menu</button>
         <div class="diff-tag" id="difficultyTag">Easy</div>
+        <div id="timerDisplay">00:00</div>
         <div id="bestTimeDisplay">Best: --:--</div>
     </div>
     
@@ -204,6 +251,7 @@
         const victoryTimeMsg = document.getElementById('victoryTimeMsg');
         
         let activeNumberTool = null; 
+        let isNotesModeActive = false;
         let timerInterval = null;
         let secondsElapsed = 0;
         let currentDifficulty = 'easy';
@@ -465,31 +513,84 @@
             if (col === 2 || col === 5) cell.classList.add('border-right');
             if (row === 2 || row === 5) cell.classList.add('border-bottom');
 
+            // Inject structural value and note slots layout elements 
+            const valDiv = document.createElement('div');
+            valDiv.classList.add('cell-value');
+            cell.appendChild(valDiv);
+
+            const notesGrid = document.createElement('div');
+            notesGrid.classList.add('notes-grid');
+            for (let n = 1; n <= 9; n++) {
+                const noteSlot = document.createElement('div');
+                noteSlot.classList.add('note-digit');
+                noteSlot.dataset.noteNum = n;
+                notesGrid.appendChild(noteSlot);
+            }
+            cell.appendChild(notesGrid);
+
             cell.addEventListener('click', () => {
                 if (cell.classList.contains('starting-number')) {
-                    if (cell.innerText) selectTool(cell.innerText);
+                    if (valDiv.innerText) selectTool(valDiv.innerText);
                     return;
                 }
-                if (activeNumberTool === 'X') {
-                    cell.innerText = '';
-                } else if (activeNumberTool !== null) {
-                    cell.innerText = activeNumberTool;
+                
+                if (isNotesModeActive) {
+                    // Logic rule: Only accept notes when a solid final answer isn't placed yet
+                    if (!valDiv.innerText && activeNumberTool && activeNumberTool !== 'X') {
+                        togglePencilNote(cell, activeNumberTool);
+                    }
+                } else {
+                    if (activeNumberTool === 'X') {
+                        valDiv.innerText = '';
+                        clearAllNotes(cell); // Wipe user marks if cell cleared
+                    } else if (activeNumberTool !== null) {
+                        valDiv.innerText = activeNumberTool;
+                        clearAllNotes(cell); // Main answer automatically hides internal notes background
+                        cascadeClearConflictNotes(row, col, activeNumberTool);
+                    }
+                    validateAndHighlight();
                 }
-                validateAndHighlight();
             });
 
             boardContainer.appendChild(cell);
         }
 
-        // 2. State Engine Routing Setup
+        // 2. Pencil Marking Execution Handlers
+        function togglePencilNote(cellDom, numStr) {
+            const slot = cellDom.querySelector(`.note-digit[data-note-num="${numStr}"]`);
+            if (slot.innerText === numStr) {
+                slot.innerText = '';
+            } else {
+                slot.innerText = numStr;
+            }
+        }
+
+        function clearAllNotes(cellDom) {
+            cellDom.querySelectorAll('.note-digit').forEach(slot => slot.innerText = '');
+        }
+
+        // Smart Quality-of-Life cleanup routine
+        function cascadeClearConflictNotes(targetRow, targetCol, solvedNumStr) {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                const r = parseInt(cell.dataset.row);
+                const c = parseInt(cell.dataset.col);
+                const sameBox = (Math.floor(targetRow / 3) === Math.floor(r / 3) && Math.floor(targetCol / 3) === Math.floor(c / 3));
+                
+                if (r === targetRow || c === targetCol || sameBox) {
+                    const slot = cell.querySelector(`.note-digit[data-note-num="${solvedNumStr}"]`);
+                    if (slot) slot.innerText = '';
+                }
+            });
+        }
+
+        // 3. State Engine Routing Setup
         window.selectDifficulty = function(level) {
             currentDifficulty = level;
             difficultyTag.innerText = level;
             
-            // Fetch records bound to this specific difficulty key
             displayBestTime();
             
-            // Random Selection Routine pulling straight out of our corresponding bank list
             const bank = puzzleLibrary[level];
             const randomIndex = Math.floor(Math.random() * bank.length);
             currentActivePuzzle = bank[randomIndex];
@@ -504,40 +605,53 @@
             const cells = document.querySelectorAll('.cell');
             for (let i = 0; i < 81; i++) {
                 const char = puzzleStr[i];
+                const valDiv = cells[i].querySelector('.cell-value');
                 cells[i].classList.remove('starting-number', 'error', 'highlight-match');
+                clearAllNotes(cells[i]);
                 
                 if (char !== "0") {
-                    cells[i].innerText = char;
+                    valDiv.innerText = char;
                     cells[i].classList.add('starting-number');
                 } else {
-                    cells[i].innerText = '';
+                    valDiv.innerText = '';
                 }
             }
             selectTool(null);
+            setNotesMode(false);
         }
 
-        // 3. Timing Thread Workflows
+        // 4. Timing & Navigation Actions
         function startTimer() {
             clearInterval(timerInterval);
             secondsElapsed = 0;
+            timerDisplay.innerText = "00:00";
             timerInterval = setInterval(() => {
                 secondsElapsed++;
-                timerDisplay.innerText = "Time: " + formatTime(secondsElapsed);
+                const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+                const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+                timerDisplay.innerText = `${mins}:${secs}`;
             }, 1000);
         }
 
-        function formatTime(totalSeconds) {
-            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
-            const secs = (totalSeconds % 60).toString().padStart(2, '0');
-            return `${mins}:${secs}`;
+        window.confirmAndExit = function() {
+            if (confirm("Are you sure you want to quit this game and return to the main menu? Progress will be lost.")) {
+                exitToMenu();
+            }
         }
 
-        // 4. Localized Database Memory Handlers
+        window.exitToMenu = function() {
+            victoryScreen.classList.remove('show');
+            introScreen.classList.remove('hidden');
+            clearInterval(timerInterval);
+        }
+
         function displayBestTime() {
             const storageKey = 'sudoku_best_' + currentDifficulty;
             const savedBest = localStorage.getItem(storageKey);
             if (savedBest) {
-                bestTimeDisplay.innerText = "Best: " + formatTime(parseInt(savedBest));
+                const mins = Math.floor(parseInt(savedBest) / 60).toString().padStart(2, '0');
+                const secs = (parseInt(savedBest) % 60).toString().padStart(2, '0');
+                bestTimeDisplay.innerText = `Best: ${mins}:${secs}`;
             } else {
                 bestTimeDisplay.innerText = "Best: --:--";
             }
@@ -553,7 +667,9 @@
                 displayBestTime();
             }
             
-            victoryTimeMsg.innerText = "Your Time: " + formatTime(secondsElapsed);
+            const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+            const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+            victoryTimeMsg.innerText = `Your Time: ${mins}:${secs}`;
             victoryScreen.classList.add('show');
         }
 
@@ -566,27 +682,30 @@
 
             cells.forEach(cell => {
                 cell.classList.remove('error', 'highlight-match');
-                if (cell.innerText) {
+                const val = cell.querySelector('.cell-value').innerText;
+                if (val) {
                     filledCount++;
-                    numberCounts[cell.innerText]++;
+                    numberCounts[val]++;
                 }
             });
 
             if (activeNumberTool && activeNumberTool !== 'X') {
                 cells.forEach(cell => {
-                    if (cell.innerText === activeNumberTool) cell.classList.add('highlight-match');
+                    if (cell.querySelector('.cell-value').innerText === activeNumberTool) {
+                        cell.classList.add('highlight-match');
+                    }
                 });
             }
 
             cells.forEach(currentCell => {
-                const val = currentCell.innerText;
+                const val = currentCell.querySelector('.cell-value').innerText;
                 if (!val) return;
                 const row = parseInt(currentCell.dataset.row);
                 const col = parseInt(currentCell.dataset.col);
 
                 cells.forEach(otherCell => {
                     if (currentCell === otherCell) return;
-                    if (val !== otherCell.innerText) return;
+                    if (val !== otherCell.querySelector('.cell-value').innerText) return;
                     const sameRow = (row === parseInt(otherCell.dataset.row));
                     const sameCol = (col === parseInt(otherCell.dataset.col));
                     const sameBox = (Math.floor(row / 3) === Math.floor(parseInt(otherCell.dataset.row) / 3) && 
@@ -601,7 +720,7 @@
 
             document.querySelectorAll('.num-btn').forEach(btn => {
                 const num = btn.dataset.tool;
-                if (num && num !== 'X') {
+                if (num && num !== 'X' && num !== 'pencil') {
                     if (numberCounts[num] === 9) btn.classList.add('completed-number');
                     else btn.classList.remove('completed-number');
                 }
@@ -613,12 +732,23 @@
         }
 
         function selectTool(targetTool) {
+            if (targetTool === 'pencil') return;
             activeNumberTool = targetTool;
             document.querySelectorAll('.num-btn').forEach(btn => {
                 if (btn.dataset.tool === targetTool) btn.classList.add('active-tool');
                 else btn.classList.remove('active-tool');
             });
             validateAndHighlight();
+        }
+
+        function setNotesMode(turnOn) {
+            isNotesModeActive = turnOn;
+            const pencilBtn = document.getElementById('pencilBtn');
+            if (isNotesModeActive) {
+                pencilBtn.classList.add('notes-on');
+            } else {
+                pencilBtn.classList.remove('notes-on');
+            }
         }
 
         // 6. Generating Pad Layout Nodes
@@ -631,18 +761,22 @@
             numpadContainer.appendChild(btn);
         }
 
+        // Add Eraser Action Button
         const clearBtn = document.createElement('button');
         clearBtn.classList.add('num-btn', 'clear-btn');
-        clearBtn.innerText = 'X';
+        clearBtn.innerText = '⌫';
         clearBtn.dataset.tool = 'X';
         clearBtn.addEventListener('click', () => selectTool('X'));
         numpadContainer.appendChild(clearBtn);
 
-        window.exitToMenu = function() {
-            victoryScreen.classList.remove('show');
-            introScreen.classList.remove('hidden');
-            clearInterval(timerInterval);
-        }
+        // Add Pencil Notes Action Button
+        const pencilBtn = document.createElement('button');
+        pencilBtn.id = 'pencilBtn';
+        pencilBtn.classList.add('num-btn', 'pencil-btn');
+        pencilBtn.innerText = '✏️';
+        pencilBtn.dataset.tool = 'pencil';
+        pencilBtn.addEventListener('click', () => setNotesMode(!isNotesModeActive));
+        numpadContainer.appendChild(pencilBtn);
     </script>
 </body>
 </html>
