@@ -1,202 +1,268 @@
 body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f7f9fa;
-            user-select: none;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        /* Menu Screen Configurations */
-        .screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #f7f9fa;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            transition: transform 0.4s ease-out;
-        }
-        .screen.hidden {
-            transform: translateY(-100%);
-        }
-        .menu-title { font-size: 42px; color: #222; margin-bottom: 10px; font-weight: bold; }
-        .menu-subtitle { font-size: 16px; color: #666; margin-bottom: 40px; }
-        
-        /* Difficulty Action Buttons */
-        .menu-btn-group {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            width: 200px;
-        }
-        .difficulty-btn {
-            padding: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            color: white;
-            border: none;
-            border-radius: 14px;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            transition: transform 0.1s;
-        }
-        .difficulty-btn:active { transform: scale(0.97); }
-        .btn-easy { background-color: #34a853; }
-        .btn-medium { background-color: #fbbc05; color: #3c4043; }
-        .btn-hard { background-color: #ea4335; }
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f7f9fa;
+    user-select: none;
+    overflow: hidden;
+    position: relative;
+}
 
-        /* Status Metrics Row */
-        .game-header {
-            width: 360px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            font-size: 15px;
-            font-weight: 600;
-            color: #5f6368;
-        }
-        .diff-tag {
-            background-color: #e8f0fe;
-            color: #1a73e8;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-        .exit-btn {
-            background: none;
-            border: 1px solid #dadce0;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            cursor: pointer;
-            color: #5f6368;
-            font-weight: bold;
-        }
-        .exit-btn:active { background-color: #f1f3f4; }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(9, 40px);
-            grid-template-rows: repeat(9, 40px);
-            background-color: #fff;
-            border: 3px solid #000;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-        }
-        
-        .cell {
-            background-color: white;
-            position: relative;
-            cursor: pointer;
-            border: 1px solid #e0e0e0;
-            box-sizing: border-box;
-        }
-        
-        .cell.border-right { border-right: 2px solid #000; }
-        .cell.border-bottom { border-bottom: 2px solid #000; }
-        
-        /* Inner Container Layouts for Answers vs Notes */
-        .cell-value {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: 500;
-            color: #1a73e8;
-            z-index: 2;
-        }
-        
-        .cell.starting-number .cell-value {
-            background-color: #f1f3f4;
-            color: #000 !important;
-            font-weight: bold;
-        }
-        
-        .notes-grid {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            padding: 2px;
-            box-sizing: border-box;
-            z-index: 1;
-        }
-        
-        .note-digit {
-            font-size: 9px;
-            color: #70757a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            line-height: 1;
-        }
-        
-        .cell.highlight-match { background-color: #fff9c4; }
-        .cell.highlight-match .cell-value { background-color: transparent !important; }
-        .cell.error { background-color: #fce8e6; }
-        .cell.error .cell-value { color: #a51d24; }
+/* Menu Screen Configurations */
+.screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: #f7f9fa;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    transition: transform 0.4s ease-out;
+}
+.screen.hidden {
+    transform: translateY(-100%);
+}
+.menu-title { font-size: 42px; color: #222; margin-bottom: 10px; font-weight: bold; }
+.menu-subtitle { font-size: 16px; color: #666; margin-bottom: 40px; }
 
-        /* Input Controls */
-        .numpad {
-            display: grid;
-            grid-template-columns: repeat(6, 52px);
-            gap: 10px;
-            justify-content: center;
-        }
-        .num-btn {
-            height: 52px;
-            background-color: #fff;
-            border: 1px solid #dadce0;
-            border-radius: 12px;
-            font-size: 22px;
-            font-weight: 600;
-            color: #3c4043;
-            cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .num-btn.active-tool { background-color: #b3d4fc !important; border-color: #1a73e8; }
-        .num-btn.completed-number { background-color: #e6f4ea; color: #137333; border-color: #a8dab5; }
-        .clear-btn { background-color: #fce8e6; color: #c5221f; border-color: #fad2cf; font-size: 18px; }
-        
-        /* Pencil Toggle Button Feature styling */
-        .pencil-btn { background-color: #fff; font-size: 18px; border-color: #dadce0; }
-        .pencil-btn.notes-on { background-color: #e8f0fe; border-color: #1a73e8; color: #1a73e8; }
+/* Difficulty Action Buttons */
+.menu-btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 200px;
+}
+.difficulty-btn {
+    padding: 15px;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    transition: transform 0.1s;
+}
+.difficulty-btn:active { transform: scale(0.97); }
+.btn-easy { background-color: #34a853; }
+.btn-medium { background-color: #fbbc05; color: #3c4043; }
+.btn-hard { background-color: #ea4335; }
 
-        /* Overlay Win Canvas */
-        .victory-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(26, 115, 232, 0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.5s ease;
-            z-index: 30;
-        }
-        .victory-screen.show { opacity: 1; pointer-events: auto; }
-        .victory-screen h2 { font-size: 40px; margin-bottom: 10px; }
-        .victory-screen p { font-size: 18px; margin-bottom: 5px; }
-        .victory-time-msg { font-size: 22px; font-weight: bold; margin-bottom: 25px; }
-        .victory-btn {
-            padding: 12px 30px; font-size: 18px; font-weight: bold;
-            background-color: white; color: #1a73e8;
-            border: none; border-radius: 25px; cursor: pointer;
-        }
+/* Status Metrics Row */
+.game-header {
+    width: 360px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #5f6368;
+}
+.diff-tag {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+.exit-btn {
+    background: none;
+    border: 1px solid #dadce0;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    color: #5f6368;
+    font-weight: bold;
+}
+.exit-btn:active { background-color: #f1f3f4; }
+
+/* Timer Container & Play/Pause Feature Style controls */
+.timer-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.pause-btn {
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.pause-btn:active {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Board Game Anchor & Blur Overlay Panel styles */
+.board-container {
+    position: relative;
+    margin-bottom: 25px;
+}
+.paused-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(247, 249, 250, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border: 3px solid transparent; /* matches structure sizing */
+    box-sizing: border-box;
+}
+.paused-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #222;
+    margin-bottom: 15px;
+}
+.resume-btn {
+    padding: 10px 24px;
+    font-size: 15px;
+    font-weight: bold;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(26,115,232,0.2);
+}
+.resume-btn:active {
+    transform: scale(0.98);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(9, 40px);
+    grid-template-rows: repeat(9, 40px);
+    background-color: #fff;
+    border: 3px solid #000;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.cell {
+    background-color: white;
+    position: relative;
+    cursor: pointer;
+    border: 1px solid #e0e0e0;
+    box-sizing: border-box;
+}
+
+.cell.border-right { border-right: 2px solid #000; }
+.cell.border-bottom { border-bottom: 2px solid #000; }
+
+/* Inner Container Layouts for Answers vs Notes */
+.cell-value {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 500;
+    color: #1a73e8;
+    z-index: 2;
+}
+
+.cell.starting-number .cell-value {
+    background-color: #f1f3f4;
+    color: #000 !important;
+    font-weight: bold;
+}
+
+.notes-grid {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    padding: 2px;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+.note-digit {
+    font-size: 9px;
+    color: #70757a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* Match Highlights and Pencil Mark Modifiers */
+.cell.highlight-match { background-color: #fff9c4; }
+.cell.highlight-match .cell-value { background-color: transparent !important; }
+
+.cell.highlight-pencil-match { background-color: #ffebee; }
+.cell.highlight-pencil-match .cell-value { background-color: transparent !important; }
+
+.cell.error { background-color: #fce8e6; }
+.cell.error .cell-value { color: #a51d24; }
+
+/* Input Controls */
+.numpad {
+    display: grid;
+    grid-template-columns: repeat(6, 52px);
+    gap: 10px;
+    justify-content: center;
+}
+.num-btn {
+    height: 52px;
+    background-color: #fff;
+    border: 1px solid #dadce0;
+    border-radius: 12px;
+    font-size: 22px;
+    font-weight: 600;
+    color: #3c4043;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.num-btn.active-tool { background-color: #b3d4fc !important; border-color: #1a73e8; }
+.num-btn.completed-number { background-color: #e6f4ea; color: #137333; border-color: #a8dab5; }
+.clear-btn { background-color: #fce8e6; color: #c5221f; border-color: #fad2cf; font-size: 18px; }
+
+/* Pencil Toggle Button Feature styling */
+.pencil-btn { background-color: #fff; font-size: 18px; border-color: #dadce0; }
+.pencil-btn.notes-on { background-color: #e8f0fe; border-color: #1a73e8; color: #1a73e8; }
+
+/* Overlay Win Canvas */
+.victory-screen {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(26, 115, 232, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+    z-index: 30;
+}
+.victory-screen.show { opacity: 1; pointer-events: auto; }
+.victory-screen h2 { font-size: 40px; margin-bottom: 10px; }
+.victory-screen p { font-size: 18px; margin-bottom: 5px; }
+.victory-time-msg { font-size: 22px; font-weight: bold; margin-bottom: 25px; }
+.victory-btn {
+    padding: 12px 30px; font-size: 18px; font-weight: bold;
+    background-color: white; color: #1a73e8;
+    border: none; border-radius: 25px; cursor: pointer;
+}

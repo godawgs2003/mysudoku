@@ -25,11 +25,21 @@
     <div class="game-header">
         <button class="exit-btn" onclick="confirmAndExit()">← Menu</button>
         <div class="diff-tag" id="difficultyTag">Easy</div>
-        <div id="timerDisplay">00:00</div>
+        
+        <!-- UPDATED: Timer and Pause Button Container Group -->
+        <div class="timer-container">
+            <div id="timerDisplay">00:00</div>
+            <button id="pauseBtn" class="pause-btn">⏸️</button>
+        </div>
+        
         <div id="bestTimeDisplay">Best: --:--</div>
     </div>
     
-    <div class="grid" id="board"></div>
+    <!-- Game Board Wrapper (helps position the blur overlay perfectly over the board) -->
+    <div class="board-container" style="position: relative;">
+        <div class="grid" id="board"></div>
+    </div>
+    
     <div class="numpad" id="numpad"></div>
 
     <!-- Celebration Screen -->
